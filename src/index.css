@@ -1,0 +1,25 @@
+/* Importación de Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Variables CSS personalizadas para colores en Tailwind v4 */
+@theme {
+	--color-background: #0f1724;
+	--color-card: #0b1220;
+	--color-primary: #7c3aed;
+}
+
+/* Estilos globales para asegurar que la aplicación ocupe toda la altura de la pantalla */
+/* html, body, #root: establece altura 100% para que el contenido pueda usar toda la altura disponible */
+/* overflow-hidden: previene el scroll en dispositivos móviles */
+html, body, #root { 
+	height: 100%; 
+	overflow: hidden;
+}
+
+/* Estilos globales para el body */
+/* Usa las variables CSS definidas en @theme */
+body { 
+	background-color: var(--color-background);
+	color: white;
+	font-family: ui-sans-serif, system-ui, sans-serif;
+}
