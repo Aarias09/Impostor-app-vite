@@ -3,6 +3,98 @@ import { create } from 'zustand'
 // Importa la base de datos por defecto con categorías y personajes predefinidos
 import { DEFAULT_DB } from '../data/defaultDatabase'
 
+// Función auxiliar para generar un número entero aleatorio uniforme y seguro
+// Combina múltiples fuentes de aleatoriedad para máxima entropía y distribución uniforme perfecta
+// max: número máximo (exclusivo) que puede retornar
+// Retorna un entero aleatorio entre 0 y max-1 con distribución perfectamente uniforme
+const getRandomInt = (max) => {
+	// Validaciones básicas
+	if (!max || max <= 0) return 0
+	if (max === 1) return 0
+	
+	try {
+		// Combina múltiples fuentes de aleatoriedad para máxima entropía
+		// Esto garantiza que incluso si una fuente tiene sesgo, la combinación lo elimina
+		
+		// 1. Fuente criptográfica segura (más segura y aleatoria)
+		const cryptoArray = new Uint32Array(2)
+		crypto.getRandomValues(cryptoArray)
+		let combined = cryptoArray[0] >>> 0 // Asegura entero sin signo de 32 bits
+		
+		// 2. Combina con segundo valor criptográfico usando XOR
+		combined = (combined ^ cryptoArray[1]) >>> 0
+		
+		// 3. Agrega entropía de Math.random() (convertido a entero de 32 bits)
+		const mathRandom = Math.floor(Math.random() * 4294967296) >>> 0
+		combined = (combined ^ mathRandom) >>> 0
+		
+		// 4. Agrega entropía del timestamp (últimos bits)
+		const timeEntropy = (Date.now() & 0xFFFFFFFF) >>> 0
+		combined = (combined ^ timeEntropy) >>> 0
+		
+		// 5. Agrega entropía de performance.now() si está disponible
+		try {
+			const perfEntropy = (Math.floor(performance.now() * 1000) & 0xFFFFFFFF) >>> 0
+			combined = (combined ^ perfEntropy) >>> 0
+		} catch (e) {
+			// Si performance.now() no está disponible, continúa sin él
+		}
+		
+		// 6. Rotación de bits para mezclar mejor los valores
+		combined = ((combined << 13) | (combined >>> 19)) >>> 0
+		combined = (combined ^ (combined << 5)) >>> 0
+		
+		// Método de rechazo mejorado para garantizar distribución uniforme perfecta
+		// Calcula el máximo múltiplo de max que cabe en 2^32
+		const maxValid = Math.floor(4294967296 / max) * max
+		let randomValue = combined
+		
+		// Si el valor está fuera del rango válido, genera uno nuevo combinando más fuentes
+		let attempts = 0
+		while (randomValue >= maxValid && attempts < 10) {
+			// Genera nuevos valores criptográficos
+			crypto.getRandomValues(cryptoArray)
+			const newCrypto = (cryptoArray[0] ^ cryptoArray[1]) >>> 0
+			const newMath = Math.floor(Math.random() * 4294967296) >>> 0
+			const newTime = (Date.now() & 0xFFFFFFFF) >>> 0
+			
+			// Combina con el valor anterior usando XOR
+			randomValue = (randomValue ^ newCrypto ^ newMath ^ newTime) >>> 0
+			randomValue = ((randomValue << 7) | (randomValue >>> 25)) >>> 0
+			attempts++
+		}
+		
+		// Si después de los intentos aún está fuera del rango, usa módulo directo
+		if (randomValue >= maxValid) {
+			randomValue = randomValue % maxValid
+		}
+		
+		// Retorna el índice aleatorio con distribución uniforme perfecta
+		let result = randomValue % max
+		result = Math.floor(result) // Asegura que sea un entero
+		result = Math.max(0, Math.min(result, max - 1)) // Asegura rango válido
+		
+		// Validación final: si el resultado no es válido, usa fallback
+		if (isNaN(result) || result < 0 || result >= max) {
+			crypto.getRandomValues(cryptoArray)
+			result = (cryptoArray[0] % max) >>> 0
+			result = Math.max(0, Math.min(result, max - 1))
+		}
+		
+		return result
+	} catch (error) {
+		// Fallback de seguridad: si algo falla, usa crypto directamente
+		try {
+			const cryptoArray = new Uint32Array(1)
+			crypto.getRandomValues(cryptoArray)
+			return (cryptoArray[0] % max) >>> 0
+		} catch (e) {
+			// Último recurso: usar Math.random()
+			return Math.floor(Math.random() * max)
+		}
+	}
+}
+
 // Crea y exporta el store global de Zustand que maneja todo el estado de la aplicación
 // Zustand es una librería de gestión de estado ligera y simple
 export const useGameStore = create(set => ({
@@ -57,23 +149,6 @@ export const useGameStore = create(set => ({
 
 	// Inicia el juego: selecciona aleatoriamente categoría, personaje e impostor
 	startGame: () => set(state => {
-		// Función auxiliar para generar un número entero aleatorio más robusto
-		// Combina múltiples llamadas a Math.random() para mayor aleatoriedad
-		// max: número máximo (exclusivo) que puede retornar
-		const getRandomInt = (max) => {
-			// Si max es 0 o menor, retorna 0
-			if (max <= 0) return 0
-			// Genera múltiples valores aleatorios y los combina para mayor aleatoriedad
-			let randomValue = 0
-			// Suma 3 valores aleatorios diferentes
-			for (let i = 0; i < 3; i++) {
-				randomValue += Math.random()
-			}
-			// Promedia los valores para obtener un número entre 0 y 1
-			randomValue = randomValue / 3
-			// Multiplica por max y redondea hacia abajo para obtener un entero entre 0 y max-1
-			return Math.floor(randomValue * max)
-		}
 
 		// Selecciona una categoría aleatoria de la base de datos
 		// Array.from(new Set(...)) elimina duplicados, obteniendo solo categorías únicas
@@ -92,8 +167,17 @@ export const useGameStore = create(set => ({
 		const chosenCharacter = candidates[characterIndex].character
 
 		// Selecciona aleatoriamente qué jugador será el impostor
-		// getRandomInt genera un índice entre 0 y la cantidad de jugadores - 1
-		const impostorIndex = getRandomInt(state.players.length)
+		// Si ya existe un impostorIndex válido (randomizado al volver al inicio), lo usa
+		// Si no existe o no es válido, lo randomiza ahora
+		// Esto garantiza que cada jugador tenga exactamente la misma probabilidad (1/n) de ser elegido
+		let impostorIndex = state.impostorIndex
+		
+		// Valida que el impostorIndex existente sea válido para la cantidad actual de jugadores
+		if (impostorIndex === null || impostorIndex === undefined || 
+		    impostorIndex < 0 || impostorIndex >= state.players.length) {
+			// Si no es válido, randomiza uno nuevo
+			impostorIndex = getRandomInt(state.players.length)
+		}
 
 		// Actualiza el estado con los valores seleccionados y cambia la vista a 'reveal'
 		return ({ 
@@ -119,11 +203,22 @@ export const useGameStore = create(set => ({
 
 	// Vuelve a la pantalla de inicio sin reiniciar completamente el juego
 	// Mantiene los jugadores pero resetea los valores del juego
-	goToHome: () => set(() => ({ 
-		view: 'home', 
-		chosenCategory: null, 
-		chosenCharacter: null, 
-		impostorIndex: null, 
-		currentRevealIndex: 0 
-	}))
+	// También randomiza el impostor para la próxima partida, asegurando distribución uniforme
+	goToHome: () => set(state => {
+		// Si hay jugadores, randomiza el impostor para la próxima partida
+		// Esto garantiza que cada vez que se presione "Iniciar Juego", 
+		// el impostor ya esté seleccionado aleatoriamente con distribución uniforme
+		let newImpostorIndex = null
+		if (state.players && state.players.length > 0) {
+			newImpostorIndex = getRandomInt(state.players.length)
+		}
+		
+		return {
+			view: 'home', 
+			chosenCategory: null, 
+			chosenCharacter: null, 
+			impostorIndex: newImpostorIndex, 
+			currentRevealIndex: 0 
+		}
+	})
 }))

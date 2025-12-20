@@ -13,6 +13,8 @@ import RevealFlow from './pages/RevealFlow'
 import Final from './pages/Final'
 // Importa el store global de Zustand para acceder al estado de la aplicación
 import { useGameStore } from './store/GameContext'
+// Importa el componente de botón de salida
+import ExitButton from './components/ExitButton'
 
 // Componente principal de la aplicación que maneja la navegación entre diferentes vistas
 export default function App() {
@@ -26,7 +28,9 @@ export default function App() {
 		// overflow-hidden: previene el scroll en dispositivos móviles
 		// flex items-center justify-center: centra el contenido vertical y horizontalmente
 		// p-2 sm:p-6: padding responsivo (pequeño en móviles, más grande en pantallas grandes)
-		<div className="h-screen overflow-hidden flex items-center justify-center p-2 sm:p-6">
+		<div className="h-screen overflow-hidden flex items-center justify-center p-2 sm:p-6 relative">
+			{/* Botón de salida que aparece en todas las pantallas */}
+			<ExitButton />
 			{/* AnimatePresence permite animar componentes cuando se montan y desmontan */}
 			{/* mode="wait" hace que espere a que un componente termine de salir antes de mostrar el siguiente */}
 			<AnimatePresence mode="wait">

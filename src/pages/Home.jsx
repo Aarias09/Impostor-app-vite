@@ -12,6 +12,7 @@ import { useGameStore } from '../store/GameContext'
 import Button from '../components/Shared/Button'
 // Importa el componente de pantalla final (aunque no se usa aquí, está importado)
 import EndScreen from '../components/EndScreen'
+import { p } from 'framer-motion/client'
 
 // Componente de la página principal donde se configura el juego
 export default function Home(){
