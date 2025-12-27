@@ -109,8 +109,15 @@ export const useGameStore = create(set => ({
 	chosenCategory: null,
 	// Personaje seleccionado aleatoriamente de la categoría elegida
 	chosenCharacter: null,
+	
 	// Índice del jugador que será el impostor (seleccionado aleatoriamente)
-	impostorIndex: null,
+	
+	//impostorIndex: null,
+	
+	impostorIndexes: [], // array de impostores
+	twoImpostors: false, // checkbox
+
+	
 	// Índice del jugador actual cuya revelación se está mostrando
 	currentRevealIndex: 0,
 	// Vista actual de la aplicación: 'home', 'reveal' o 'final'
@@ -135,6 +142,8 @@ export const useGameStore = create(set => ({
 		// Filtra el array de jugadores, manteniendo todos excepto el del índice especificado
 		players: state.players.filter((_, idx) => idx !== i) 
 	})),
+
+	setTwoImpostors: (value) => set(() => ({ twoImpostors: value })),
 
 	// Reinicia completamente el juego, restaurando todos los valores a su estado inicial
 	resetGame: () => set(() => ({ 
@@ -170,21 +179,35 @@ export const useGameStore = create(set => ({
 		// Si ya existe un impostorIndex válido (randomizado al volver al inicio), lo usa
 		// Si no existe o no es válido, lo randomiza ahora
 		// Esto garantiza que cada jugador tenga exactamente la misma probabilidad (1/n) de ser elegido
-		let impostorIndex = state.impostorIndex
+		// let impostorIndex = state.impostorIndex
 		
-		// Valida que el impostorIndex existente sea válido para la cantidad actual de jugadores
-		if (impostorIndex === null || impostorIndex === undefined || 
-		    impostorIndex < 0 || impostorIndex >= state.players.length) {
-			// Si no es válido, randomiza uno nuevo
-			impostorIndex = getRandomInt(state.players.length)
+		// // Valida que el impostorIndex existente sea válido para la cantidad actual de jugadores
+
+		// if (impostorIndex === null || impostorIndex === undefined || 
+		//     impostorIndex < 0 || impostorIndex >= state.players.length) {
+		// 	// Si no es válido, randomiza uno nuevo
+		// 	impostorIndex = getRandomInt(state.players.length)
+		// }
+
+		const impostorCount = state.twoImpostors ? 2 : 1
+
+		if (state.players.length < impostorCount + 1) {
+			alert(`Se necesitan al menos ${impostorCount + 1} jugadores`)
+			return {}
 		}
+
+		const shuffledIndexes = state.players
+			.map((_, i) => i)
+			.sort(() => Math.random() - 0.5)
+
+		const impostorIndexes = shuffledIndexes.slice(0, impostorCount)
 
 		// Actualiza el estado con los valores seleccionados y cambia la vista a 'reveal'
 		return ({ 
-			chosenCategory, 
-			chosenCharacter, 
-			impostorIndex, 
-			currentRevealIndex: 0, 
+			chosenCategory,
+			chosenCharacter,
+			impostorIndexes,
+			currentRevealIndex: 0,
 			view: 'reveal' 
 		})
 	}),
@@ -208,16 +231,22 @@ export const useGameStore = create(set => ({
 		// Si hay jugadores, randomiza el impostor para la próxima partida
 		// Esto garantiza que cada vez que se presione "Iniciar Juego", 
 		// el impostor ya esté seleccionado aleatoriamente con distribución uniforme
-		let newImpostorIndex = null
+		let impostorIndexes = []
+		
 		if (state.players && state.players.length > 0) {
-			newImpostorIndex = getRandomInt(state.players.length)
-		}
+		const count = state.twoImpostors ? 2 : 1
+		const shuffled = state.players
+			.map((_, i) => i)
+			.sort(() => Math.random() - 0.5)
+		impostorIndexes = shuffled.slice(0, count)
+	}
+
 		
 		return {
 			view: 'home', 
 			chosenCategory: null, 
-			chosenCharacter: null, 
-			impostorIndex: newImpostorIndex, 
+			chosenCharacter: null,
+			impostorIndexes,
 			currentRevealIndex: 0 
 		}
 	})

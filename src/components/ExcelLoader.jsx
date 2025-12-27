@@ -82,6 +82,7 @@ export default function ExcelLoader(){
 				<div className="text-xs sm:text-sm text-gray-300 self-center text-center sm:text-left">
 					(Formato: Categoria | Personaje)
 				</div>
+				
 			</div>
 		</div>
 	)

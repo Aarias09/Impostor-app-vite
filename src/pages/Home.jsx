@@ -21,6 +21,9 @@ export default function Home(){
 	// Obtiene la función para iniciar el juego del store global
 	const startGame = useGameStore(s => s.startGame)
 
+	const { twoImpostors, setTwoImpostors } = useGameStore()
+
+
 	return (
 		// Contenedor principal con ancho máximo y centrado
 		<div className="w-full max-w-2xl mx-auto">
@@ -40,6 +43,39 @@ export default function Home(){
 					{/* Componente que renderiza todos los jugadores con opción de eliminar */}
 					<PlayerList />
 				</section>
+
+				{/*agrega un check para dos impostores*/}
+				<div className="mt-6 flex justify-end mb-5">
+					<label className="flex items-center gap-4 cursor-pointer select-none">
+
+						<span className="text-sm text-gray-300">
+							2 Impostores
+						</span>
+
+						{/* Switch */}
+					<div className="relative">
+						<input
+							type="checkbox"
+							className="sr-only"
+							checked={twoImpostors}
+							onChange={(e) => setTwoImpostors(e.target.checked)}
+						/>
+
+					<div
+						className={`w-11 h-6 rounded-full transition-colors duration-300
+						${twoImpostors ? 'bg-primary' : 'bg-gray-600'}`}
+					/>
+
+					<div
+						className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full
+						transition-transform duration-300
+						${twoImpostors ? 'translate-x-5' : ''}`}
+					/>
+				</div>
+						
+
+					</label>
+				</div>
 
 				{/* Sección para cargar un archivo Excel con la base de datos */}
 				<section className="mb-6 sm:mb-10">

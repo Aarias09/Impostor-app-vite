@@ -41,13 +41,12 @@ export default function RevealRole({ playerName, playerIndex }){
 	// Obtiene el personaje seleccionado aleatoriamente de la categoría elegida
 	const chosenCharacter = useGameStore(s => s.chosenCharacter)
 	// Obtiene el índice del jugador que es el impostor
-	const impostorIndex = useGameStore(s => s.impostorIndex)
+	const impostorIndexes = useGameStore(s => s.impostorIndexes)
 	// Obtiene la función para avanzar al siguiente jugador
 	const nextReveal = useGameStore(s => s.nextReveal)
 
-	// Determina si el jugador actual es el impostor
-	// Compara el índice del jugador actual con el índice del impostor
-	const isImpostor = playerIndex === impostorIndex
+	// Determina si el jugador actual es uno de los impostores
+	const isImpostor = impostorIndexes.includes(playerIndex)
 	
 	// Busca la imagen del jugador en el objeto playerImages
 	// Busca sin importar mayúsculas o minúsculas en el nombre
